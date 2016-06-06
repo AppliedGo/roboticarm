@@ -104,9 +104,10 @@ And that's it. Let's pour this into code and we're done.
 ## The code
 */
 
-// Only the plain `math` package is needed for the formulas.
+//
 package main
 
+// Only the plain `math` package is needed for the formulas.
 import (
 	"fmt"
 	"math"
@@ -133,27 +134,25 @@ func squareDist(x, y float64) (dist float64) {
 	return x*x + y*y
 }
 
-// Calculating angle D1 is trivial.
-// Atan2 is a modified atan() function that returns
-// unambiguous results.
-func D1(x, y float64) float64 {
-	return math.Atan2(y, x)
-}
-
 // Calculating the two joint angles for given x and y.
 func angles(x, y float64) (A1, A2 float64) {
 	// First, get the length of line *dist*.
 	dist := math.Sqrt(squareDist(x, y))
 
+	// Calculating angle D1 is trivial.
+	// `Atan2` is a modified *arctan()* function that returns
+	// unambiguous results.
+	D1 := math.Atan2(y, x)
+
 	// D2 can be calculated using the law of cosines where
-	// a = dist, b = len1, c = len2
+	// a = dist, b = len1, and c = len2.
 	D2 := lawOfCosines(dist, len1, len2)
 
 	// Then A1 is simply the sum of D1 and D2.
-	A1 = D1(x, y) + D2
+	A1 = D1 + D2
 
 	// A2 can also be calculated with the law of cosine, but this time with
-	// a = len1, b = len2, c = dist
+	// a = len1, b = len2, and c = dist.
 	A2 = lawOfCosines(len1, len2, dist)
 
 	return A1, A2
