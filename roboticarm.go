@@ -9,27 +9,102 @@ whose licenses are provided in the respective license files.
 -->
 
 +++
-title = ""
-description = ""
+title = "Inverse Kinematics: how to move a robot arm (and why this is harder than it seems)"
+description = "This article first glances over Inverse Kinematics. Then a small sample code implements a SCARA robot's arm movement."
 author = "Christoph Berger"
-email = "chris@appliedgo.com"
-date = "2016-00-00"
-publishdate = "2016-00-00"
-domains = [""]
-tags = ["", "", ""]
+email = "chris@appliedgo.net"
+date = "2016-06-16"
+publishdate = "2016-06-16"
+domains = ["Robotics"]
+tags = ["Inverse Kinematics", "SCARA", "Trigonometry"]
 categories = ["Tutorial"]
 +++
 
-### Summary goes here
+So you want to control a robot's arm? Great, here is a very simple scenario of a SCARA robot's arm.
+
+Small caveat: You cannot generalize the formula to cover complex robot arms.
 
 <!--more-->
 
-## Intro goes here
+![SCARA robot arm writing hello](SCARA_left.gif)
+(Image (c) Pasimi. License: [CC-BY-SA](https://creativecommons.org/licenses/by-sa/3.0/deed.en). Source: [Wikipedia](https://commons.wikimedia.org/wiki/File:SCARA_left.gif))
+
+Today I felt like finding out how to calculate the movements of a robot's arm. The idea was to find a dead simple example for a robot's arm with only two segments and parallel axes. Then, I was sure, this example could easily be generalized to more segments and to axes with arbitraty orientation.
+
+I could not be more wrong.
+
+It took not too long until I realized that the story of inverse kinematics has some weird twists.
+
+
+## Twist 1: Calculating backwards can be incredibly hard.
+
+Inverse kinematics has a counterpart: Forward kinematics. Here, you look at each segment of a robot's arm--the direction of the joint's axis, the angle of the joint, the length of the arm--in order to calculate where the end is; then you repeat with the next segment, until you arrive at the robot's hand. Et voilà: you finally found the hand's position.
+
+While this is almost as easy as it seems, it turns out that the opposite direction--to identify the position and orientation of each arm segment--is much much harder. One obstacle is that the forward-calculating functions involve a lot of trigonometrics, and the inverse of such functions have no unique result. Another obstacle is that the calculations may lead to mathematically correct results, yet the mechanics of the arm prevent to take the calculated position.
+
+
+## Twist 2: There is no single approach to inverse kinematics.
+
+Rather, there are three of them.
+
+1. The algebraic approach: This basically works by solving rather complex matrix equations.
+2. The geometric approach: The idea is to combine knowledge about the robot arm's geometry with suitable trigonometric formulas.
+3. The numeric approach: Take a guess and look how far you are off. Move one or more segments to locally minimize the error. Repeat.
+
+
+## Twist 3: Simple scenarios cannot be generalized.
+
+Take the [SCARA robot arm](https://en.wikipedia.org/wiki/SCARA) mentioned in the abstract. This is really a special case: Only two segments, and the two axes have the same orientation. For this simple geometry, a couple of trigonometric calculations are sufficient for finding the required angle for each joint. However, add more segments and add joints with different axis orientation, and complexity explodes.
+
+
+## No excuse for thowing in the towel
+
+After all these twists and turns, the story definitely goes different than I planned it. Still I am not giving up!
+
+Let's just stick with the SCARA robot and look how to make it work. The resulting code is ridicuously small but the theory behind it is quite interesting.
+
+### The robot as a 2d graph
+
+Here is a schematic diagram of our robot:
+
+![The SCARA robot arm](robotarm.png)
+
+The arm consists of two segments with lengths `len1` and `len2`. The root joint describes an angle A1 measured from the x axis. The second joint describes an angle *A2* measured from the first segment (counterclockwise in both cases). At the tip of segment 2 there is a point *(x,y)*, and we want to calculate back from that point to the yet unknown values of *A1* and *A2*.
+
+In the diagram you also see a dotted line named `dist`. It points from *(0,0)* to *(x,y)*, and as you can easily see, the three lines `dist`, `len1`, and `len2` define a triangle. Now is a good moment to dig out some old trig formulas from school.
+
+It is fascinating [how many formulas there are](https://en.wikipedia.org/wiki/List_of_trigonometric_identities) just for reasoning about a simple triangle. Luckily, for our purposes, we only need one of them: The Law of Cosines.
+
+![The Law of Cosines](lawofcosines.png)
+
+The law of cosines (see the first formula in the picture above) is a generalization of the Pythargorean theorem for right triangles (c^2 = a^2 + b^2) to arbitrary triangles. We do not need the basic form, but rather the transformed version that you can see below the original formula. With this version, we can calculate angle *C* from the triangle's sides *a*, *b*, and *c*. This comes handy in two places.
+
+But first, let's see what we need.
+
+* From the robot arm picture above, we can directly derive the first formula:
+
+      A1 = D1 + D2
+
+* D1 is fairly easy to calculate. This is good ol' Pythagoras:
+
+  ![D1 is calculated from Pythagoras](calcd1.png)
+
+* D2 requires the law of cosines.
+  Basically, we just map our "robot triangle" to the "law" triangle by using *dist* as *a*,
+  *len1* as *b*, and *len2* as *c*. The resulting angle *C* is our *D2*.
+
+  ![D2 and the law of cosines](calcd2.png)
+
+  * Now only A2 is left. Luckily, we can reuse the law of cosines for this. We only need to map our triangle to the one from the law of cosines, this time with different parameter mappings: *len1* as *a*, *len2* as *b*, and *dist* as *c*.
+
+  ![Calculating A2](calca2.png)
+
+And that's it. Let's pour this into code and we're done.
 
 ## The code
 */
 
-// ## Imports and globals
+// Only the plain `math` package is needed for the formulas.
 package main
 
 import (
@@ -45,11 +120,11 @@ const (
 	len2 = 10.0
 )
 
-// The law of cosine, transfomred so that *C* is the unknown.
+// The law of cosines, transfomred so that *C* is the unknown.
 // The names of the sides and angles correspond to the standard
 // names in mathematical writing. Later, we have to map the
 // sides and angles from our scenario to a, b, c, and C, respectively.
-func lawOfCosine(a, b, c float64) (C float64) {
+func lawOfCosines(a, b, c float64) (C float64) {
 	return math.Acos((a*a + b*b - c*c) / (2 * a * b))
 }
 
@@ -72,33 +147,17 @@ func angles(x, y float64) (A1, A2 float64) {
 
 	// D2 can be calculated using the law of cosines where
 	// a = dist, b = len1, c = len2
-	D2 := lawOfCosine(dist, len1, len2)
+	D2 := lawOfCosines(dist, len1, len2)
 
 	// Then A1 is simply the sum of D1 and D2.
 	A1 = D1(x, y) + D2
 
 	// A2 can also be calculated with the law of cosine, but this time with
 	// a = len1, b = len2, c = dist
-	A2 = lawOfCosine(len1, len2, dist)
+	A2 = lawOfCosines(len1, len2, dist)
 
 	return A1, A2
 }
-
-/*
-### An unnecessary calculation
-
-Did you notice the superfluous calculation hidden in the functions? `angles()` passes
-the square root of `squareDist()` to lawOfCosine(), where the value is again squared. To square the
-square root of a value is a no-op, so let's see if we can avoid this, as we do already have the square
-value readily available.
-
-We could change `lawOfCosine()` to accept the squared value of *dist* rather than *dist* itself. However,
-`angles()` calls `lawOfCosine()` two times, and the second time with a shifted parameter list. Because of
-this, *dist* is passed to `lawOfCosine()` in the place of *c*. So `lawOfCosine` would treat *a* as the
-squared value, which is not correct.
-
-If we want to eliminate the no-op, we have no choice but to define two separate functions.
-*/
 
 func deg(rad float64) float64 {
 	return rad * 180 / math.Pi
@@ -107,33 +166,39 @@ func deg(rad float64) float64 {
 func main() {
 
 	// Lets do some tests, first for (5,5):
-	a1, a2 := angles(5, 5)
-	fmt.Printf("angles  - x=%v (%v°), y=%v (%v°)\n", a1, deg(a1), a2, deg(a2))
-	//a1, a2 = angles2(5, 5)
-	//fmt.Printf("angles2 - x=%v (%v°), y=%v (%v°)\n", a1, deg(a1), a2, deg(a2))
+	x, y := 5.0, 5.0
+	a1, a2 := angles(x, y)
+	fmt.Printf("x=%v, y=%v: A1=%v (%v°), A2=%v (%v°)\n", x, y, a1, deg(a1), a2, deg(a2))
 
 	// If y is 0 and x = Sqrt(10^2 + 10^2), then alpha should become 45 degrees
 	// and beta should become 90 degrees.
-	a1, a2 = angles(math.Sqrt(200), 0)
-	fmt.Printf("angles  - x=%v (%v°), y=%v (%v°)\n", a1, deg(a1), a2, deg(a2))
-	//1, a2 = angles2(math.Sqrt(200), 0)
-	//mt.Printf("angles2 - x=%v (%v°), y=%v (%v°)\n", a1, deg(a1), a2, deg(a2))
+	x, y = math.Sqrt(200), 0
+	a1, a2 = angles(x, y)
+	fmt.Printf("x=%v, y=%v: A1=%v (%v°), A2=%v (%v°)\n", x, y, a1, deg(a1), a2, deg(a2))
 
-	// Now let's try (1, 19)
-	a1, a2 = angles(1, 19)
-	fmt.Printf("angles  - x=%v (%v°), y=%v (%v°)\n", a1, deg(a1), a2, deg(a2))
-	//1, a2 = angles2(1, 19)
-	//mt.Printf("angles2 - x=%v (%v°), y=%v (%v°)\n", a1, deg(a1), a2, deg(a2))
+	// Now let's try (1, 19).
+	x, y = 1, 19
+	a1, a2 = angles(x, y)
+	fmt.Printf("x=%v, y=%v: A1=%v (%v°), A2=%v (%v°)\n", x, y, a1, deg(a1), a2, deg(a2))
 
-	// (20,0)
-	a1, a2 = angles(20, 0)
-	fmt.Printf("angles  - x=%v (%v°), y=%v (%v°)\n", a1, deg(a1), a2, deg(a2))
-	//1, a2 = angles2(20, 0)
-	//mt.Printf("angles2 - x=%v (%v°), y=%v (%v°)\n", a1, deg(a1), a2, deg(a2))
+	// An extreme case: (20,0).
+	x, y = 20, 0
+	a1, a2 = angles(x, y)
+	fmt.Printf("x=%v, y=%v: A1=%v (%v°), A2=%v (%v°)\n", x, y, a1, deg(a1), a2, deg(a2))
 
-	// (0,20)
-	a1, a2 = angles(0, 20)
-	fmt.Printf("angles  - x=%v (%v°), y=%v (%v°)\n", a1, deg(a1), a2, deg(a2))
-	//1, a2 = angles2(0, 20)
-	//mt.Printf("angles2 - x=%v (%v°), y=%v (%v°)\n", a1, deg(a1), a2, deg(a2))
+	// And (0,20).
+	x, y = 0, 20
+	a1, a2 = angles(x, y)
+	fmt.Printf("x=%v, y=%v: A1=%v (%v°), A2=%v (%v°)\n", x, y, a1, deg(a1), a2, deg(a2))
+
+	// (0,0) technically works if the arm segments have the same length.
+	// Still we get some weird result here!?
+	x, y = 0, 0
+	a1, a2 = angles(x, y)
+	fmt.Printf("x=%v, y=%v: A1=%v (%v°), A2=%v (%v°)\n", x, y, a1, deg(a1), a2, deg(a2))
+
+	// What happens if the target point is outside the reach? Like (20,20).
+	x, y = 20, 20
+	a1, a2 = angles(x, y)
+	fmt.Printf("x=%v, y=%v: A1=%v (%v°), A2=%v (%v°)\n", x, y, a1, deg(a1), a2, deg(a2))
 }
