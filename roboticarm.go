@@ -26,8 +26,8 @@ Small caveat: You cannot generalize the formula to cover complex robot arms.
 
 <!--more-->
 
-![SCARA robot arm writing hello](SCARA_left.gif)
-(Image (c) Pasimi. License: [CC-BY-SA](https://creativecommons.org/licenses/by-sa/3.0/deed.en). Source: [Wikipedia](https://commons.wikimedia.org/wiki/File:SCARA_left.gif))
+HYPE[SCARA robot arm writing hello](SCARA_left.html)
+*Image By Pasimi (Own work) [<a href="http://creativecommons.org/licenses/by-sa/3.0">CC BY-SA 3.0</a>], <a href="https://commons.wikimedia.org/wiki/File%3ASCARA_left.gif">via Wikimedia Commons</a>*
 
 Today I felt like finding out how to calculate the movements of a robot's arm. The idea was to find a dead simple example for a robot's arm with only two segments and parallel axes. Then, I was sure, this example could easily be generalized to more segments and to axes with arbitraty orientation.
 
@@ -36,34 +36,37 @@ I could not be more wrong.
 It took not too long until I realized that the story of inverse kinematics has some weird twists.
 
 
-## Twist 1: Calculating backwards can be incredibly hard.
+## Twist 1: Calculating arm movement backwards can be challenging.
 
 Inverse kinematics has a counterpart: Forward kinematics. Here, you look at each segment of a robot's arm--the direction of the joint's axis, the angle of the joint, the length of the arm--in order to calculate where the end is; then you repeat with the next segment, until you arrive at the robot's hand. Et voilà: you finally found the hand's position.
 
-While this is almost as easy as it seems, it turns out that the opposite direction--to identify the position and orientation of each arm segment--is much much harder. One obstacle is that the forward-calculating functions involve a lot of trigonometrics, and the inverse of such functions have no unique result. Another obstacle is that the calculations may lead to mathematically correct results, yet the mechanics of the arm prevent to take the calculated position.
+While this is almost as easy as it seems, it turns out that the opposite direction--to identify the position and orientation of each arm segment--is [much harder](https://en.wikipedia.org/wiki/Arm_solution). One obstacle is that the forward-calculating functions involve a lot of trigonometrics, and the inverses of such functions have no unique solutions. Another obstacle is that the calculations may lead to mathematically correct results, yet the mechanics of the arm prevent to take the calculated position.
 
 
 ## Twist 2: There is no single approach to inverse kinematics.
 
 Rather, there are three of them.
 
-1. The algebraic approach: This basically works by solving rather complex matrix equations.
+1. The algebraic approach: This basically works by solving rather complex matrix equations. (Definitely beyond the scope of a small weekly blog article. Plus I haven't dealt with matrix calculations since the last millenium...)
 2. The geometric approach: The idea is to combine knowledge about the robot arm's geometry with suitable trigonometric formulas.
 3. The numeric approach: Take a guess and look how far you are off. Move one or more segments to locally minimize the error. Repeat.
+
+Which one to pick? After all, each of them has its raison d'être.
 
 
 ## Twist 3: Simple scenarios cannot be generalized.
 
-Take the [SCARA robot arm](https://en.wikipedia.org/wiki/SCARA) mentioned in the abstract. This is really a special case: Only two segments, and the two axes have the same orientation. For this simple geometry, a couple of trigonometric calculations are sufficient for finding the required angle for each joint. However, add more segments and add joints with different axis orientation, and complexity explodes.
+Take the [SCARA robot arm](https://en.wikipedia.org/wiki/SCARA) mentioned in the abstract. This is indeed a quite special case: The arm has only two segments, and the joints' axes have the same orientation. For this simple geometry, a couple of trigonometric calculations are sufficient for finding the required angle for each joint. However, add more segments and add joints with different axis orientation, and complexity explodes.
 
 
-## No excuse for thowing in the towel
+## No reason for thowing in the towel
 
 After all these twists and turns, the story definitely goes different than I planned it. Still I am not giving up!
 
-Let's just stick with the SCARA robot and look how to make it work. The resulting code is ridicuously small but the theory behind it is quite interesting.
+Let's just stick with the SCARA robot and look how to move its arm using plain trigonometry. The resulting code is ridicuously small but is quite interesting to see the theory behind that code. (I promise I will not get too deep into maths and formulas.)
 
-### The robot as a 2d graph
+
+## Applying the geometric approach to the SCARA robot
 
 Here is a schematic diagram of our robot:
 
@@ -85,21 +88,21 @@ But first, let's see what we need.
 
       A1 = D1 + D2
 
-* D1 is fairly easy to calculate. This is good ol' Pythagoras:
+* *D1* is fairly easy to calculate. This is good ol' Pythagoras:
 
   ![D1 is calculated from Pythagoras](calcd1.png)
 
-* D2 requires the law of cosines.
-  Basically, we just map our "robot triangle" to the "law" triangle by using *dist* as *a*,
+* *D2* requires the law of cosines.
+  Basically, we just map our "robot triangle" to the "law of cosines" triangle by using *dist* as *a*,
   *len1* as *b*, and *len2* as *c*. The resulting angle *C* is our *D2*.
 
   ![D2 and the law of cosines](calcd2.png)
 
-  * Now only A2 is left. Luckily, we can reuse the law of cosines for this. We only need to map our triangle to the one from the law of cosines, this time with different parameter mappings: *len1* as *a*, *len2* as *b*, and *dist* as *c*.
+  * Now only *A2* is left. Luckily, we can reuse the law of cosines for this. We only need to map our triangle to the one from the law of cosines with different parameter mappings than for *D2*: *len1* as *a*, *len2* as *b*, and *dist* as *c*.
 
   ![Calculating A2](calca2.png)
 
-And that's it. Let's pour this into code and we're done.
+And that's it. Let's pour this into code now.
 
 ## The code
 */
@@ -129,19 +132,19 @@ func lawOfCosines(a, b, c float64) (C float64) {
 	return math.Acos((a*a + b*b - c*c) / (2 * a * b))
 }
 
-// The distance from *(0,0)* to *(x,y)*, squared.
-func squareDist(x, y float64) (dist float64) {
-	return x*x + y*y
+// The distance from *(0,0)* to *(x,y)*.
+// HT to Pythagoras.
+func distance(x, y float64) float64 {
+	return math.Sqrt(x*x + y*y)
 }
 
 // Calculating the two joint angles for given x and y.
 func angles(x, y float64) (A1, A2 float64) {
 	// First, get the length of line *dist*.
-	dist := math.Sqrt(squareDist(x, y))
+	dist := distance(x, y)
 
 	// Calculating angle D1 is trivial.
-	// `Atan2` is a modified *arctan()* function that returns
-	// unambiguous results.
+	// `Atan2` is a modified *arctan()* function that [returns unambiguous results.](https://golang.org/pkg/math/#Atan2)
 	D1 := math.Atan2(y, x)
 
 	// D2 can be calculated using the law of cosines where
@@ -158,6 +161,7 @@ func angles(x, y float64) (A1, A2 float64) {
 	return A1, A2
 }
 
+// Convert radians into degrees.
 func deg(rad float64) float64 {
 	return rad * 180 / math.Pi
 }
@@ -201,3 +205,10 @@ func main() {
 	a1, a2 = angles(x, y)
 	fmt.Printf("x=%v, y=%v: A1=%v (%v°), A2=%v (%v°)\n", x, y, a1, deg(a1), a2, deg(a2))
 }
+
+/* ## Outlook
+
+The next article approaches the same problem from the numerical viewpoint. That is, we let the robot iteratively move its arm in small steps until it reaches the target.
+
+Until then, have fun
+*/
