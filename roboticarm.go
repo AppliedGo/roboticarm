@@ -20,61 +20,60 @@ tags = ["Inverse Kinematics", "SCARA", "Trigonometry"]
 categories = ["Tutorial"]
 +++
 
-So you want to control a robot's arm? Great, here is a very simple scenario of a SCARA robot's arm.
-
-Small caveat: You cannot generalize the formula to cover complex robot arms.
+So you have built a robot arm? Great, let's make it serve your five o'clock tea. Sounds simple enough. Or is it?
 
 <!--more-->
 
 HYPE[SCARA robot arm writing hello](SCARA_left.html)
 *Image By Pasimi (Own work) [<a href="http://creativecommons.org/licenses/by-sa/3.0">CC BY-SA 3.0</a>], <a href="https://commons.wikimedia.org/wiki/File%3ASCARA_left.gif">via Wikimedia Commons</a>*
 
-Today I felt like finding out how to calculate the movements of a robot's arm. The idea was to find a dead simple example for a robot's arm with only two segments and parallel axes. Then, I was sure, this example could easily be generalized to more segments and to axes with arbitraty orientation.
+## Forward kinematics
 
-I could not be more wrong.
+Calculating the current coordinates of a robot's hand is easy.
 
-It took not too long until I realized that the story of inverse kinematics has some weird twists.
+We just need to look at each segment of a robot's arm--the coordinates of the segment's base, the direction of the joint's axis, the angle between this segment and the next one, and the length of the segment--in order to calculate where the end of this segment is. Repeat this with each segment, until we arrive at the robot's hand. Et voilà: we determined the hand's position.
 
+This is called forward kinematics.
 
-## Twist 1: Calculating arm movement backwards can be challenging.
+## Inverse kinematics
 
-Inverse kinematics has a counterpart: Forward kinematics. Here, you look at each segment of a robot's arm--the direction of the joint's axis, the angle of the joint, the length of the arm--in order to calculate where the end is; then you repeat with the next segment, until you arrive at the robot's hand. Et voilà: you finally found the hand's position.
+Now the robot's arm must adjust each joint's angle in order to move its hand over the cup. This is quite the opposite of the previous calculation - here, we start with a given position and want to know how to rotate each segment of the arm.
 
-While this is almost as easy as it seems, it turns out that the opposite direction--to identify the position and orientation of each arm segment--is [much harder](https://en.wikipedia.org/wiki/Arm_solution). One obstacle is that the forward-calculating functions involve a lot of trigonometrics, and the inverses of such functions have no unique solutions. Another obstacle is that the calculations may lead to mathematically correct results, yet the mechanics of the arm prevent to take the calculated position.
+It turns out that this is [much harder](https://en.wikipedia.org/wiki/Arm_solution) than the forward case. And whenever something is hard to solve, there are usually several different approaches available for solving that problem. For inverse kinematics, there are three:
 
-
-## Twist 2: There is no single approach to inverse kinematics.
-
-Rather, there are three of them.
-
-1. The algebraic approach: This basically works by solving rather complex matrix equations. (Definitely beyond the scope of a small weekly blog article. Plus I haven't dealt with matrix calculations since the last millenium...)
+1. The algebraic approach: This basically works by solving rather complex matrix equations.
 2. The geometric approach: The idea is to combine knowledge about the robot arm's geometry with suitable trigonometric formulas.
-3. The numeric approach: Take a guess and look how far you are off. Move one or more segments to locally minimize the error. Repeat.
+3. The numeric approach: Take a guess and look how far we are off. Move one or more segments to locally minimize the error. Repeat.
 
 Which one to pick? After all, each of them has its raison d'être.
 
-
-## Twist 3: Simple scenarios cannot be generalized.
-
-Take the [SCARA robot arm](https://en.wikipedia.org/wiki/SCARA) mentioned in the abstract. This is indeed a quite special case: The arm has only two segments, and the joints' axes have the same orientation. For this simple geometry, a couple of trigonometric calculations are sufficient for finding the required angle for each joint. However, add more segments and add joints with different axis orientation, and complexity explodes.
+For the sake of brevity, let's drop the first one. It involves a lot of matrix calculations, and frankly, I haven't done any since the last millennium or so.
 
 
-## No reason for thowing in the towel
+## The SCARA robot arm
 
-After all these twists and turns, the story definitely goes different than I planned it. Still I am not giving up!
+To make matters more simple, our robot has a very simple design.
 
-Let's just stick with the SCARA robot and look how to move its arm using plain trigonometry. The resulting code is ridicuously small but is quite interesting to see the theory behind that code. (I promise I will not get too deep into maths and formulas.)
+* The arm has only two segments of fixed length.
+* The segments can only rotate around their base joint; there is no sliding movement.
+* The axes of both joints have the same direction.
+* There is no hand attached to the end of the arm.
 
-
-## Applying the geometric approach to the SCARA robot
+A robot of this kind is called a [SCARA robot](https://en.wikipedia.org/wiki/SCARA).
 
 Here is a schematic diagram of our robot:
 
-![The SCARA robot arm](robotarm.png)
+![The SCARA robot and a cup of tea](positions.png)
 
-The arm consists of two segments with lengths `len1` and `len2`. The root joint describes an angle A1 measured from the x axis. The second joint describes an angle *A2* measured from the first segment (counterclockwise in both cases). At the tip of segment 2 there is a point *(x,y)*, and we want to calculate back from that point to the yet unknown values of *A1* and *A2*.
+## Applying the geometric approach to the SCARA robot
 
-In the diagram you also see a dotted line named `dist`. It points from *(0,0)* to *(x,y)*, and as you can easily see, the three lines `dist`, `len1`, and `len2` define a triangle. Now is a good moment to dig out some old trig formulas from school.
+Let me just tweak the diagram a little by replacing some of the labels and adding one line and two angles:
+
+![The SCARA robot arm as a triangle](robotarm.png)
+
+Now we can see that the segments have the length *len1* and *len2*, respectively. The root joint describes an angle *A1* measured from the x axis. The second joint describes an angle *A2* measured from the first segment (counterclockwise in both cases). At the tip of segment 2 there is a point *(x,y)*, and we want to calculate back from that point to the yet unknown values of *A1* and *A2*.
+
+In the diagram you also see a dotted line named `dist`. It points from *(0,0)* to *(x,y)*, and as you can easily see, the three lines `dist`, *len1*, and *len2* define a triangle. Now is a good moment to dig out some old trig formulas from school.
 
 It is fascinating [how many formulas there are](https://en.wikipedia.org/wiki/List_of_trigonometric_identities) just for reasoning about a simple triangle. Luckily, for our purposes, we only need one of them: The Law of Cosines.
 
@@ -210,5 +209,5 @@ func main() {
 
 The next article approaches the same problem from the numerical viewpoint. That is, we let the robot iteratively move its arm in small steps until it reaches the target.
 
-Until then, have fun
+Until then, have fun!
 */
