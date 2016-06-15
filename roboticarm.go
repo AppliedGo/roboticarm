@@ -167,47 +167,56 @@ func deg(rad float64) float64 {
 
 func main() {
 
-	// Lets do some tests, first for (5,5):
+	fmt.Println("Lets do some tests. First move to (5,5):")
 	x, y := 5.0, 5.0
 	a1, a2 := angles(x, y)
 	fmt.Printf("x=%v, y=%v: A1=%v (%v°), A2=%v (%v°)\n", x, y, a1, deg(a1), a2, deg(a2))
 
-	// If y is 0 and x = Sqrt(10^2 + 10^2), then alpha should become 45 degrees
-	// and beta should become 90 degrees.
+	fmt.Println("If y is 0 and x = Sqrt(10^2 + 10^2), then alpha should become 45 degrees and beta should become 90 degrees.")
 	x, y = math.Sqrt(200), 0
 	a1, a2 = angles(x, y)
 	fmt.Printf("x=%v, y=%v: A1=%v (%v°), A2=%v (%v°)\n", x, y, a1, deg(a1), a2, deg(a2))
 
-	// Now let's try (1, 19).
+	fmt.Println("Now let's try moving to (1, 19).")
 	x, y = 1, 19
 	a1, a2 = angles(x, y)
 	fmt.Printf("x=%v, y=%v: A1=%v (%v°), A2=%v (%v°)\n", x, y, a1, deg(a1), a2, deg(a2))
 
-	// An extreme case: (20,0).
+	fmt.Println("n extreme case: (20,0). The arm needs to stretch along the y axis.")
 	x, y = 20, 0
 	a1, a2 = angles(x, y)
 	fmt.Printf("x=%v, y=%v: A1=%v (%v°), A2=%v (%v°)\n", x, y, a1, deg(a1), a2, deg(a2))
 
-	// And (0,20).
+	fmt.Println("And (0,20).")
 	x, y = 0, 20
 	a1, a2 = angles(x, y)
 	fmt.Printf("x=%v, y=%v: A1=%v (%v°), A2=%v (%v°)\n", x, y, a1, deg(a1), a2, deg(a2))
 
-	// (0,0) technically works if the arm segments have the same length.
-	// Still we get some weird result here!?
+	fmt.Println("Moving to (0,0) technically works if the arm segments have the same length, and if the arm does not block itself. Still the result looks a bit weird!?")
 	x, y = 0, 0
 	a1, a2 = angles(x, y)
 	fmt.Printf("x=%v, y=%v: A1=%v (%v°), A2=%v (%v°)\n", x, y, a1, deg(a1), a2, deg(a2))
 
-	// What happens if the target point is outside the reach? Like (20,20).
+	fmt.Println("What happens if the target point is outside the reach? Like (20,20).")
 	x, y = 20, 20
 	a1, a2 = angles(x, y)
 	fmt.Printf("x=%v, y=%v: A1=%v (%v°), A2=%v (%v°)\n", x, y, a1, deg(a1), a2, deg(a2))
 }
 
-/* ## Outlook
+/*
 
-The next article approaches the same problem from the numerical viewpoint. That is, we let the robot iteratively move its arm in small steps until it reaches the target.
+## Homework
+
+Why does *A1* evaluate to `NaN` ("Not a Number") when we try moving the arm to (0,0)?
+
+Hint 1: It is about the law of cosines function.
+
+Hint 2: The arm does not form a triangle in this case. (Yes, this hint is actually a spoiler, sorry...)
+
+
+## Outlook
+
+The next article discusses the numeric approach. That is, we let the robot iteratively move its arm in small steps until it reaches the target.
 
 Until then, have fun!
 */
