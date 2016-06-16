@@ -9,7 +9,7 @@ whose licenses are provided in the respective license files.
 -->
 
 +++
-title = "Inverse Kinematics: how to move a robot arm (and why this is harder than it seems)"
+title = "Inverse Kinematics: how to move a robotic arm (and why this is harder than it seems)"
 description = "This article first glances over Inverse Kinematics. Then a small sample code implements a SCARA robot's arm movement."
 author = "Christoph Berger"
 email = "chris@appliedgo.net"
@@ -20,12 +20,11 @@ tags = ["Inverse Kinematics", "SCARA", "Trigonometry"]
 categories = ["Tutorial"]
 +++
 
-So you have built a robot arm? Great, let's make it serve your five o'clock tea. Sounds simple enough. Or is it?
+So you have built a robotic arm? Great, let's write some Go to make it serve your five o'clock tea. Sounds simple enough. Or is it?
 
 <!--more-->
 
-HYPE[SCARA robot arm writing hello](SCARA_left.html)
-*Image By Pasimi (Own work) [<a href="http://creativecommons.org/licenses/by-sa/3.0">CC BY-SA 3.0</a>], <a href="https://commons.wikimedia.org/wiki/File%3ASCARA_left.gif">via Wikimedia Commons</a>*
+![Robotic arm serving tea](tearobot.jpg)
 
 ## Forward kinematics
 
@@ -35,29 +34,34 @@ We just need to look at each segment of a robot's arm--the coordinates of the se
 
 This is called forward kinematics.
 
+
 ## Inverse kinematics
 
 Now the robot's arm must adjust each joint's angle in order to move its hand over the cup. This is quite the opposite of the previous calculation - here, we start with a given position and want to know how to rotate each segment of the arm.
 
-It turns out that this is [much harder](https://en.wikipedia.org/wiki/Arm_solution) than the forward case. And whenever something is hard to solve, there are usually several different approaches available for solving that problem. For inverse kinematics, there are three:
+It turns out that this is [much harder](https://en.wikipedia.org/wiki/Arm_solution) than the forward case. And whenever something is hard to solve, there are usually several different approaches available for solving that problem. For inverse kinematics, there are three of them:
 
-1. The algebraic approach: This basically works by solving rather complex matrix equations.
-2. The geometric approach: The idea is to combine knowledge about the robot arm's geometry with suitable trigonometric formulas.
+1. The algebraic approach: This basically works by solving (frankly, rather complex) matrix equations.
+2. The geometric approach: The idea is to combine knowledge about the robotic arm's geometry with suitable trigonometric formulas.
 3. The numeric approach: Take a guess and look how far we are off. Move one or more segments to locally minimize the error. Repeat.
 
 Which one to pick? After all, each of them has its raison d'être.
 
 For the sake of brevity, let's drop the first one. It involves a lot of matrix calculations, and frankly, I haven't done any since the last millennium or so.
 
+The second one, the geometric approach, can become quite complex when the robot's arm consists of many segments and joints. Luckily, all complexity vanishes in the case of a simple robotic arm with only two segments, so let's go with this approach. (In a future article, I'll give the numeric approach a try.)
 
-## The SCARA robot arm
+At this point, I must admit that when I started working on this article, I expected that the formulas for the simple two-segment arm could easily be generalized to multi-segment, multi-joint robotic arms, but I found that this is not the case. So for this article, we'll stick with what is probably the most simple robotic arm with rotary joints.
 
-To make matters more simple, our robot has a very simple design.
+
+## The SCARA robot
+
+Our robotic arm shall meet the following requirements.
 
 * The arm has only two segments of fixed length.
 * The segments can only rotate around their base joint; there is no sliding movement.
 * The axes of both joints have the same direction.
-* There is no hand attached to the end of the arm.
+* There is no hand attached to the end of the arm. (Robot hands would have additional degrees of freedom, and remember that we want to keep things simple. Now you know why our robot just serves tea.)
 
 A robot of this kind is called a [SCARA robot](https://en.wikipedia.org/wiki/SCARA).
 
@@ -69,21 +73,26 @@ Here is a schematic diagram of our robot:
 
 Let me just tweak the diagram a little by replacing some of the labels and adding one line and two angles:
 
-![The SCARA robot arm as a triangle](robotarm.png)
+![The SCARA robotic arm as a triangle](robotarm.png)
 
-Now we can see that the segments have the length *len1* and *len2*, respectively. The root joint describes an angle *A1* measured from the x axis. The second joint describes an angle *A2* measured from the first segment (counterclockwise in both cases). At the tip of segment 2 there is a point *(x,y)*, and we want to calculate back from that point to the yet unknown values of *A1* and *A2*.
+This diagram tells us a couple of things:
 
-In the diagram you also see a dotted line named `dist`. It points from *(0,0)* to *(x,y)*, and as you can easily see, the three lines `dist`, *len1*, and *len2* define a triangle. Now is a good moment to dig out some old trig formulas from school.
+* The segments have the length *len1* and *len2*, respectively.
+* The root joint describes an angle *A1* measured from the x axis.
+* The second joint describes an angle *A2* measured from the first segment (counterclockwise in both cases).
+* The tip of segment 2 points to *(x,y)*, and we want to calculate back from that point to the yet unknown values of *A1* and *A2*.
 
-It is fascinating [how many formulas there are](https://en.wikipedia.org/wiki/List_of_trigonometric_identities) just for reasoning about a simple triangle. Luckily, for our purposes, we only need one of them: The Law of Cosines.
+In the diagram you also see a new dotted line named `dist`. It points from *(0,0)* to *(x,y)*, and as you can easily see, the three lines `dist`, *len1*, and *len2* define a triangle. Furthermore, *dist* divides angle *A1* into two angles *D1* and *D2*.
+
+Now is a good moment to dig out an old trig formula you may remember from school: The law of cosines.
 
 ![The Law of Cosines](lawofcosines.png)
 
-The law of cosines (see the first formula in the picture above) is a generalization of the Pythargorean theorem for right triangles (c^2 = a^2 + b^2) to arbitrary triangles. We do not need the basic form, but rather the transformed version that you can see below the original formula. With this version, we can calculate angle *C* from the triangle's sides *a*, *b*, and *c*. This comes handy in two places.
+The law of cosines (see the first formula in the figure above) is a generalization of the Pythagorean theorem (c<sup>2</sup> = a<sup>2</sup> + b<sup>2</sup> for right(-angled) triangles) to arbitrary triangles. We do not need the basic form, but rather the transformed version that you can see below the original formula. With this version, we can calculate angle *C* from the triangle's sides *a*, *b*, and *c*. This comes handy in two places, as we'll see shortly.
 
-But first, let's see what we need.
+So how do we calculate *A1* and *A2*?
 
-* From the robot arm picture above, we can directly derive the first formula:
+* From the robotic arm diagram above (the one with *D1*, *D2*, *dist*, etc), we can directly derive the first formula:
 
       A1 = D1 + D2
 
@@ -205,7 +214,7 @@ func main() {
 
 /*
 
-## Homework
+## "Homework assignment"
 
 Why does *A1* evaluate to `NaN` ("Not a Number") when we try moving the arm to (0,0)?
 
@@ -216,7 +225,9 @@ Hint 2: The arm does not form a triangle in this case. (Yes, this hint is actual
 
 ## Outlook
 
-The next article discusses the numeric approach. That is, we let the robot iteratively move its arm in small steps until it reaches the target.
+In a future article we'll look into the numeric approach. That is, we let the robot iteratively move its arm in small steps until it reaches the target.
+
+Next week's article is a lightweight take on Dependency Injection.
 
 Until then, have fun!
 */
