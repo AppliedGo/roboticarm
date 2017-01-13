@@ -96,9 +96,12 @@ So how do we calculate *A1* and *A2*?
 
       A1 = D1 + D2
 
-* *D1* is fairly easy to calculate. This is good ol' Pythagoras:
+* *D1* is fairly easy to calculate. In the following diagram, *x*, *y*, and *dist* define a right-angled triangle. Here, *D1* can be calculated in two ways: The arcsine of *y/dist* or the arctangent of *y/x*.
 
-  ![D1 is calculated from Pythagoras](calcd1.png)
+    However, there is a problem hidden here. The formulas certainly are correct if x and y are positive, but what if either of the two, or even both, are negative? Luckily, a solution is available in form of a method from the standard library: `math.Atan2(y, x)`. It delivers the correct result for all possible combinations of x and y. (More details [on Wikipedia](https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Application:_finding_the_angle_of_a_right_triangle).)
+
+  ![D1 is calculated as arctangent of y/x](arctan.png)
+
 
 * *D2* requires the law of cosines.
   Basically, we just map our "robot triangle" to the "law of cosines" triangle by using *dist* as *a*,
@@ -230,4 +233,10 @@ In a future article we'll look into the numeric approach. That is, we let the ro
 Next week's article is a lightweight take on Dependency Injection.
 
 Until then, have fun!
+
+- - -
+
+Updates
+
+2017-01-13: Fixed: The code uses Atan2 to calculate D1, but the text used Pythagoras.
 */
