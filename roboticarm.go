@@ -15,9 +15,9 @@ author = "Christoph Berger"
 email = "chris@appliedgo.net"
 date = "2016-06-16"
 publishdate = "2016-06-16"
-domains = ["Robotics"]
+categories = ["Robotics"]
 tags = ["Inverse Kinematics", "SCARA", "Trigonometry"]
-categories = ["Tutorial"]
+articletypes = ["Tutorial"]
 +++
 
 So you have built a robotic arm? Great, let's write some Go to make it serve your five o'clock tea. Sounds simple enough. Or is it?
